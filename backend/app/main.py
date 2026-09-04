@@ -6,12 +6,13 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from .memory import add_message, get_history, clear_memory
+from .personality import get_personality
 
 load_dotenv()
 
 app = FastAPI(
     title="ECHO AI",
-    version="0.2.0"
+    version="0.3.0"
 )
 
 
@@ -24,7 +25,7 @@ def home():
     return {
         "status": "online",
         "assistant": "ECHO AI",
-        "version": "0.2.0"
+        "version": "0.3.0"
     }
 
 
@@ -54,19 +55,23 @@ def chat(request: ChatRequest):
         )
 
     add_message("user", request.message)
-
     history = get_history()
+    personality = get_personality()
+
+    instructions = (
+        f"You are {personality['name']}, a personal AI assistant. "
+        f"Use a {personality['tone']} tone and a {personality['style']} style. "
+        "Be natural, conversational, friendly, and helpful. "
+        "Do not claim to be human. "
+        "Use the conversation history when appropriate."
+    )
 
     try:
         client = OpenAI(api_key=api_key)
 
         response = client.responses.create(
             model="gpt-5-mini",
-            instructions=(
-                "You are ECHO, a personal AI assistant. "
-                "Be natural, friendly, conversational, and helpful. "
-                "Use the conversation history when appropriate."
-            ),
+            instructions=instructions,
             input=history
         )
 
