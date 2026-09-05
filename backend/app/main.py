@@ -5,9 +5,8 @@ from fastapi import FastAPI, HTTPException
 from openai import OpenAI
 from pydantic import BaseModel
 
-from .memory import add_message, get_history, clear_memory
-from .personality import get_personality
-
+from .memory import get_history, clear_memory
+from .conversation import build_context
 load_dotenv()
 
 app = FastAPI(
@@ -54,9 +53,7 @@ def chat(request: ChatRequest):
             detail="OPENAI_API_KEY is not configured."
         )
 
-    add_message("user", request.message)
-    history = get_history()
-    personality = get_personality()
+    history = build_context(request.message)
 
     instructions = (
         f"You are {personality['name']}, a personal AI assistant. "
