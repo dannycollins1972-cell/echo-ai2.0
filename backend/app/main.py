@@ -111,6 +111,14 @@ def chat(request: ChatRequest):
     history = build_context(request.message)
     personality = get_personality()
 
+    api_input = []
+
+    for message in history:
+        api_input.append({
+            "role": message["role"],
+            "content": message["content"],
+        })
+
     instructions = (
         f"You are {personality['name']}, a personal AI assistant. "
         f"Use a {personality['tone']} tone and a "
@@ -126,21 +134,35 @@ def chat(request: ChatRequest):
         response = client.responses.create(
             model="gpt-5-mini",
             instructions=instructions,
-            input=history,
+            input=api_input,
         )
 
         reply = response.output_text
-
-        from .memory import add_message
 
         add_message("assistant", reply)
 
         return {
             "response": reply,
+            "offline": False,
         }
 
     except Exception as error:
+        error_text = str(error)
+
+        if (
+            "insufficient_quota" in error_text
+            or "credit_balance_exhausted" in error_text
+        ):
+            return {
+                "response": (
+                    "I'm currently unable to reach my AI service because "
+                    "the API account has no available credits. "
+                    "My local ECHO system is still running correctly."
+                ),
+                "offline": True,
+            }
+
         raise HTTPException(
             status_code=500,
-            detail=str(error),
+            detail=error_text,
         )
